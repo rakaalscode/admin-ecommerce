@@ -9,7 +9,7 @@
     <meta name="author" content="Admin Mintone">
     <!-- Favicon icon -->
     <link rel="icon" type="image/png" sizes="16x16" href="{{asset('assets/imgs/favicon.png')}}">
-    <title>Admin Mintone - Bootstrap 4 Admin Template</title>
+    <title>@yield('title', 'Admin Marketplace')</title>
     <!-- Bootstrap Core CSS -->
     <link href="{{asset('plugins/vendors/bootstrap/css/bootstrap.min.css')}}" rel="stylesheet">
     <link href="{{asset('plugins/vendors/perfect-scrollbar/css/perfect-scrollbar.css')}}" rel="stylesheet">

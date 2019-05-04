@@ -1,10 +1,9 @@
 @extends('layouts.app')
 
-@section('title', 'Admin Marketplace | Category')
+@section('title', 'Admin Marketplace | Product')
 
 @push('before-css')
     <!-- This page CSS -->
-    <!-- chartist CSS -->
     <link href="{{asset('plugins/vendors/morrisjs/morris.css')}}" rel="stylesheet">
     <!--c3 CSS -->
     <link href="{{asset('plugins/vendors/c3-master/c3.min.css')}}" rel="stylesheet">
@@ -12,9 +11,6 @@
     <link href="{{asset('plugins/vendors/toast-master/css/jquery.toast.css')}}" rel="stylesheet">
     <!-- Vector CSS -->
     <link href="{{asset('plugins/vendors/vectormap/jquery-jvectormap-2.0.2.css')}}" rel="stylesheet"/>
-    <!-- Date picker plugins css -->
-    <link href="{{asset('plugins/vendors/bootstrap-datepicker/bootstrap-datepicker.min.css')}}" rel="stylesheet"
-          type="text/css"/>
     <!-- page css -->
     <link href="{{asset('assets/css/pages/google-vector-map.css')}}" rel="stylesheet">
     <!-- Sweet Alert -->
@@ -58,13 +54,13 @@
                 <div class="card">
                     <div class="card-body">
                         <div class="d-flex m-b-10 no-block">
-                            <h5 class="card-title m-b-0 align-self-center">List Kategori</h5>
+                            <h5 class="card-title m-b-0 align-self-center">List Produk</h5>
                             <div class="ml-auto text-light-blue">
                                 <ul class="nav nav-tabs customtab default-customtab list-inline text-uppercase lp-5 font-medium font-12"
                                     role="tablist">
                                     <li>
-                                        <a onclick="addForm()" style="color:white;"
-                                           class="btn waves-effect waves-light btn-rounded btn-primary">Tambah Kategori</a>
+                                        <a href="{{ route('product.create') }}" style="color:white;"
+                                           class="btn waves-effect waves-light btn-rounded btn-primary">Tambah produk</a>
                                     </li>
                                 </ul>
                             </div>
@@ -74,7 +70,12 @@
                                 <thead>
                                 <tr>
                                     <td>ID</td>
-                                    <td>Kategori</td>
+                                    <td>Produk</td>
+                                    <td>Category</td>
+                                    <td>SKU</td>
+                                    <td>Price</td>
+                                    <td>Qty</td>
+                                    <td>Merchant</td>
                                     <td class="op-0">Aksi</td>
                                 </tr>
                                 </thead>
@@ -91,10 +92,7 @@
         <!-- End Info box -->
         <!-- chart box two -->
         <!-- ============================================================== -->
-
     </div>
-
-@include('category.form')
 
 @endsection
 
@@ -121,173 +119,100 @@
 <script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/additional-methods.min.js"></script>
 <script>
 
-//modal add
-function addForm() {
-    save_method = "add";
-    $('input[name=_method]').val('POST');
-    $('#modal-form').modal('show');
-    $('#modal-form form')[0].reset();
-    $('.modal-title').text('Tambah Kategori');
-    $('.button').text('Simpan');
-}
-
-// modal edit
-function editForm(id) {
-    save_method = 'edit';
-    $('input[name=_method]').val('PATCH');
-    $('#modal-form form')[0].reset();
-    $.ajax({
-        url: "{{ url('category') }}" + '/' + id + "/edit",
-        type: "GET",
-        dataType: "JSON",
-        success: function(data) {
-        $('#modal-form').modal('show');
-        $('.modal-title').text('Edit Kategori');
-        $('.button').text('Ubah');
-        $('#id').val(data.id);
-        $('#name').val(data.name);
-        $('#slug').val(data.kode_service);
-        },
-        error : function() {
-            alert("Nothing Data");
-        }
-    });
-}
-
-// action modal
-$(function(){
-    $('#modal-form').on('submit', function (e) {
-        if (!e.isDefaultPrevented()){
-            var id = $('#id').val();
-            var feature_image = $('#feature_image').val();
-            console.log(feature_image);
-            
-            if (save_method == 'add') url = "{{ url('category') }}";
-            else url = "{{ url('category') . '/' }}" + id;
-            $.ajax({
-                url : url,
-                type : "POST",
-//              data : $('#modal-form form').serialize(),
-                data: new FormData($("#modal-form form")[0]),
-                contentType: false,
-                processData: false,
-                success : function(data) {
-                    $('#modal-form').modal('hide');
-                    if (save_method == 'add'){
-                        $.toast({
-                            heading: 'Success!',
-                            position: 'top-center',
-                            text: 'Data berhasil disimpan',
-                            loaderBg: '#ff6849',
-                            icon: 'success',
-                            hideAfter: 3000,
-                            stack: 6
-                        });
-                        console.log(data);
-                        
-                    }else{
-                        $.toast({
-                            heading: 'Success!',
-                            position: 'top-center',
-                            text: 'Data berhasil disimpan',
-                            loaderBg: '#ff6849',
-                            icon: 'success',
-                            hideAfter: 3000,
-                            stack: 6
-                        });
-                    }
-                    $('#myTable').DataTable().ajax.reload();
-                    
-                },
-                error : function(data){
-                    var err = JSON.parse(data.responseText);
-                    if( data.status === 422 ) {
-                        if(err.errors['feature_image']) {
-                            $('.hide-alert-image').css('display', "block");
-                            $('.hide-alert-image').text(err.errors['feature_image']);
-                        }else if(err.errors['name']) {
-                            console.log(err.errors['name']);
-                            
-                            $('.hide-alert').css('display', "block");
-                            $('.hide-alert').text(err.errors['name']);
-                        }
-                    }
-                    $('#modal-form')
-                        .on('hidden.bs.modal', function () {
-                            $('.hide-alert').text([]);
-                            $('.hide-alert-image').text([]);
-                            
-                        });
-                }
-            });
-            return false;
-        }
-    });
+@if(\Session::has('message'))
+$.toast({
+    heading: 'Success!',
+    position: 'top-center',
+    text: '{{session()->get('message')}}',
+    loaderBg: '#ff6849',
+    icon: 'success',
+    hideAfter: 3000,
+    stack: 6
 });
+@endif
 
-$(document).ready(function() {
-    $('#modal-form')
-    .on('hidden.bs.modal', function () {
-        $('.hide-alert').text([]);
-        $('.hide-alert-image').text([]);
-        $("#mainid").val(null).trigger("change"); 
-    });
+@if(\Session::has('messages'))
+$.toast({
+    heading: 'Warning!',
+    position: 'top-center',
+    text: '{{session()->get('messages')}}',
+    loaderBg: '#ff6849',
+    icon: 'error',
+    hideAfter: 3000,
+    stack: 6
 });
-
-// validate input
-$(document).ready(function(){
-    $("#categoryForm").validate({
-        rules:{
-            'name':{
-                required: true,
-                maxlength: 175
-            },
-            'feature_image':{
-                extension: "jpg|jpeg|png"
-            },
-        },
-        messages: {
-            name: {
-                required: "Kolom nama kategori harus diisi",
-                maxlength: "Maksimal 175 karakter"
-            },
-            feature_image: {
-                extension: "Format gambar harus JPG, JPEG, PNG"
-            }
-        }
-    });
-    $('#modal-form')
-        .on('hidden.bs.modal', function () {
-            $('#categoryForm').validate().resetForm();
-        });
-});
+@endif
 
 //datatables
-    $(function () {
-        $('#myTable').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: "{{ route('category.json') }}",
-        columns: [
-            { data: 'id', name: 'id' },
-            { data: 'name-image', name: 'name' },
-            { data: 'action', name: 'action', orderable: false, searchable: false},
-        ],
-        "order": [[ 0, "desc" ]],
-        'columnDefs': [
-        {
-            "targets": 2,
-            "className": "text-center"
-        },
-        {
-            "targets": 0,
-            "className": "text-center"
-        },
-        { 
-            "width": "5%", "targets": 0 
-        }]
-    });
-    });
+$(function () {
+    $('#myTable').DataTable({
+    processing: true,
+    serverSide: true,
+    ajax: "{{ route('product.json') }}",
+    columns: [
+        { data: 'id', name: 'id' },
+        { data: 'name-image', name: 'title' },
+        { data: 'catname', name: 'categories.name' },
+        { data: 'sku', name: 'sku' },
+        { data: 'price', name: 'price' },
+        { data: 'stock', name: 'stock' },
+        { data: 'mercname', name: 'vendor_profiles.name' },
+        { data: 'action', name: 'action', orderable: false, searchable: false},
+    ],
+    "order": [[ 0, "desc" ]],
+    'columnDefs': [
+    {
+        "targets": 2,
+        "className": "text-center"
+    },
+    {
+        "targets": 0,
+        "className": "text-center"
+    },
+    { 
+        "width": "5%", "targets": 0 
+    }]
+});
+});
+
+//status data
+function statusData(id){
+    var csrf_token = $('meta[name="csrf_token"]').attr('content');
+
+    swal({
+        title: 'Apakah Anda yakin?',
+        text: "Status akan diubah",
+        type: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya',
+        cancelButtonText: 'Tidak',
+        showLoaderOnConfirm: true,
+        
+    preConfirm: function() {
+        return new Promise(function(resolve) {
+            $.ajax({
+                url : "{{ url('product/status') }}" + '/' + id,
+                type : "POST",
+                data : {'_method' : 'POST', '_token' : csrf_token},
+            })
+            .done(function(response){
+                swal(
+                    'Sukses!',
+                    'Data berhasil diubah!',
+                    'success'
+                )
+                $('#myTable').DataTable().ajax.reload();
+            })
+                .fail(function(){
+                swal('Oops...', 'Maaf terjadi kesalahan !', 'error');
+            });
+        });
+    },
+    allowOutsideClick: false			  
+});	
+}
 
 //delete data
 function deleteData(id){
@@ -307,7 +232,7 @@ function deleteData(id){
     preConfirm: function() {
         return new Promise(function(resolve) {
             $.ajax({
-                url : "{{ url('category') }}" + '/' + id,
+                url : "{{ url('product') }}" + '/' + id,
                 type : "POST",
                 data : {'_method' : 'DELETE', '_token' : csrf_token},
             })

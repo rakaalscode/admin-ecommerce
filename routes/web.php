@@ -13,9 +13,35 @@
 
 Auth::routes();
 
+//Product
+Route::resource('/product', 'ProductController');
+Route::post('product/status/{id}','ProductController@status')->name('product.status');
+Route::get('title_product','ProductController@title_product');
+Route::get('product/{id}/edit/check','ProductController@title_product_edit')->name('edit.title');
+Route::get('/product/getBrands/{id}', 'ProductController@getBrands');
+Route::get('/product/subcats/{id}', 'ProductController@subcats');
+Route::delete('/product/force-delete/{product}','ProductController@forceDestroy')->name('product.forceDestroy');
+Route::get('/productJson', 'ProductController@productDatatables')->name('product.json');
+
 //Category
-Route::resource('/category', 'CategoryController');
+Route::resource('/category', 'CategoryController')->except([
+    'create', 'show'
+]);
+Route::delete('/category/force-delete/{category}','CategoryController@forceDestroy')->name('category.forceDestroy');
 Route::get('/categoryJson', 'CategoryController@categoryDatatables')->name('category.json');
+
+//Sub Category
+Route::resource('/subcategory', 'SubCategoryController')->except([
+    'create', 'show'
+]);
+Route::delete('/subcategory/force-delete/{subcategory}','SubCategoryController@forceDestroy')->name('subcategory.forceDestroy');
+Route::get('/subcategory/categoryJson','SubCategoryController@categorylist')->name('category.list');
+Route::get('/subcategoryJson', 'SubCategoryController@subCategoryDatatables')->name('subcategory.json');
+
+// Order 
+Route::resource('/orders', 'OrderController');
+Route::get('/orderJson', 'OrderController@orderDatatables')->name('order.json');
+
 
 Route::get('/', function () {
     return view('dashboard.index');

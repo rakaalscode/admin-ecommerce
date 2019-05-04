@@ -6,15 +6,16 @@ use Illuminate\Http\Request;
 use App\Category;
 use Mockery\Exception;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Validation\Rule;
 use App\Helpers\{alliyunOSS};
 use DataTables;
 
-class CategoryController extends Controller
+class SubCategoryController extends Controller
 {
   
     public function index()
     {
-        return view('category.index');
+        return view('subcategory.index');
     }
    
     public function store(Request $request)
@@ -23,20 +24,28 @@ class CategoryController extends Controller
         $this->validate(
             $request, 
             [   
-                'name'          => 'required|string|max:25|unique:categories',
+                'name'          => 'required',
                 'feature_image' => 'required|image|mimes:jpg,png,jpeg',
                 'feature_image' => 'max:3240',
-                
             ],
             [
                 'name.required'                     => 'Kolom nama harus diisi',
-                'name.unique'                       => 'Nama kategori sudah dipakai',
                 'feature_image.requred'             => 'Gambar kategori harus diisi',
                 'feature_image.mimes:jpg,png,jpeg'  => 'Format gambar harus jpeg, jpg, png',
                 'feature_image.max'                 => 'Ukuran gambar maksimal 3MB'
             ]
         );
         try {
+            $checkMainName = Category::where('name',$request->input('name'))->where('mainid',$request->input('mainid'))->first();
+            if($checkMainName != null)
+            {
+                $returnData = array(
+                    'errors' => 'Nama kategori sudah dipakai',
+                    'message' => 'Error duplicate'
+                );
+                return Response::json($returnData, 422);
+            }
+
             $input = $request->all();
             $input['feature_image'] = null;
 
@@ -52,7 +61,7 @@ class CategoryController extends Controller
             
             return response()->json([
                 'success' => 200,
-                'message' => 'Category Created'
+                'message' => 'SubCategory Created'
             ]);
 
         } catch (\Exception $e) {
@@ -67,8 +76,10 @@ class CategoryController extends Controller
     
     public function edit($id)
     {
-        $category = Category::findOrFail($id);
-        return $category;
+    $category = Category::select('id','mainid','feature_image','name','status')->findOrFail($id);
+    $main     = Category::findOrFail($category->mainid);
+    $category->mainname = $main->name;
+    return $category;
     }
    
     public function update(Request $request, $id)
@@ -78,7 +89,7 @@ class CategoryController extends Controller
         $this->validate(
             $request, 
             [   
-                'name'          => 'required|unique:categories,name,' . $id,
+                'name'          => 'required',
                 'feature_image' => 'nullable|image|mimes:jpg,png,jpeg'
             ],
             [
@@ -89,6 +100,17 @@ class CategoryController extends Controller
         );
 
         try {
+
+            $checkMainName = Category::where('name',$request->input('name'))->where('mainid',$request->input('mainid'))->where('id',$id)->first();
+            if($checkMainName == null)
+            {
+                $returnData = array(
+                    'errors' => 'Nama kategori sudah dipakai',
+                    'message' => 'Error duplicate'
+                );
+                return Response::json($returnData, 422);
+            }
+
             $input = $request->all();
 
             $input['feature_image'] = $category->feature_image;
@@ -116,48 +138,38 @@ class CategoryController extends Controller
                 'status' => 'error',
                 'message' => 'Terjadi kesalahan'
             );
-            return Response::json($returnData, 422);
+            return Response::json($returnData, 400);
         }
     }
     
     public function destroy($id)
     {
-        $category       = Category::findOrFail($id);
-        // category ship to product
-        $categoryShip   = Category::join('products', 'products.main_category', '=', 'categories.id')
+        $subcategory       = Category::findOrFail($id);
+        $subcategoryShip   = Category::join('products', 'products.category', '=', 'categories.id')
                                     ->where('categories.id',$id)
                                     ->first();
-        // category ship to subcategory
-        $subcategoryShip    = Category::where('mainid',$id)->first();
-        
-        if($categoryShip != null || $subcategoryShip != null) 
+        if($subcategoryShip != null) 
         {
-            if($subcategoryShip != null)
-            {
-                $subcategoryShip = Category::where('mainid',$id)->delete();
-            }
-            $category->delete();
-            
+            $subcategory->delete($id);
         }
         else
         {
-            if($category->feature_image != null){
-                $pictureurl         = $category->feature_image;
+            if($subcategory->feature_image != null){
+                $pictureurl         = $subcategory->feature_image;
                 $pictureName        = substr($pictureurl,39);
                 $deletePicture      = (new alliyunOSS())->deleteImage($pictureName);
             }
-            $category->forceDelete($id);
-            $subcategoryShip->forceDelete($id);
+            $subcategory->forceDelete($id);
         }
         return response()->json([
             'success' => 200
         ]);
     }
 
-    public function categoryDatatables(Request $request)
+    public function subCategoryDatatables(Request $request)
     {
-        $category = Category::select(['id', 'name', 'feature_image','slug','status'])
-                            ->where('mainid',NULL);
+        $category = Category::select(['id', 'name', 'mainid', 'feature_image', 'slug', 'status'])
+                            ->where('mainid','!=',NULL);
       
         return Datatables::of($category)
         
@@ -173,8 +185,33 @@ class CategoryController extends Controller
                 }
                 return "<p class='text-dark weight-600'><img src='$photo' alt='$photo' width='42' height='42'> $category->name</p>";
             })
+            ->editColumn('mainid', function ($category) {
+                $main     = Category::withTrashed()->findOrFail($category->mainid);
+                return $category->mainname = $main->name;
+                
+            })
             ->rawColumns(['name-image','action'])
 
             ->make(true);
+    }
+
+    public function categorylist(Request $request)
+    {
+        //get data kategori
+        $term = trim($request->q);
+
+        if (empty($term)) {
+            return \Response::json([]);
+        }
+
+        $tags = Category::where('mainid',NULL)->where('status','1')->search($term)->limit(5)->get();
+
+        $formatted_tags = [];
+
+        foreach ($tags as $tag) {
+            $formatted_tags[] = ['id' => $tag->id, 'text' => $tag->name];
+        }
+
+        return \Response::json($formatted_tags);
     }
 }
