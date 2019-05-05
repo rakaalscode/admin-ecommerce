@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Merchant;
+use Illuminate\Support\Facades\Response;
 
 use DataTables;
 use DB;
@@ -16,14 +17,42 @@ class MerchantController extends Controller
         return view('merchant.index');
     }
 
-    public function create()
-    {
-        //
-    }
-
     public function store(Request $request)
     {
-        //
+        // validasi
+        $this->validate(
+            $request, 
+            [   
+                'email'          => 'required|email|max:200|unique:vendor_profiles',
+                'name'           => 'required|max:200',
+                
+            ],
+            [
+                'name.required'     => 'Kolom nama harus diisi',
+                'email.required'    => 'Kolom email harus diisi',
+                'email.email'       => 'Masukan format email',
+                'email.unique'      => 'Email sudah dipakai',
+            ]
+        );
+        try {
+            $input['email'] = $request->input('email');
+            $input['name']  = $request->input('name');
+            $input['is_official_store'] = $request->input('status') ? 'true' : 'false';
+
+            Merchant::create($input);
+            
+            return response()->json([
+                'success' => 200,
+                'message' => 'Merchant Created'
+            ]);
+
+        } catch (\Exception $e) {
+            $returnData = array(
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan pada server'
+            );
+            return Response::json($returnData, 400);
+        }
     }
 
     public function show($id)
@@ -33,12 +62,46 @@ class MerchantController extends Controller
 
     public function edit($id)
     {
-        //
+        $merchant = Merchant::findOrFail($id);
+        return $merchant;
     }
 
     public function update(Request $request, $id)
     {
-        //
+        $merchant = Merchant::findOrFail($id);
+        // validasi
+        $this->validate(
+            $request, 
+            [   
+                'email'          => 'required|email|max:200|unique:vendor_profiles,email,' . $id,
+                'name'           => 'required|max:200',
+            ],
+            [
+                'name.required'     => 'Kolom nama harus diisi',
+                'email.required'    => 'Kolom email harus diisi',
+                'email.email'       => 'Masukan format email',
+                'email.unique'      => 'Email sudah dipakai',
+            ]
+        );
+
+        try {
+            $input['email'] = $request->input('email');
+            $input['name']  = $request->input('name');
+            $input['is_official_store'] = $request->input('status') ? 'true' : 'false';
+
+            $merchant->update($input);
+
+            return response()->json([
+                'success' => 200
+            ]);
+
+        } catch (\Exception $e) {
+            $returnData = array(
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan pada server'
+            );
+            return Response::json($returnData, 422);
+        }
     }
 
     public function destroy($id)
@@ -54,16 +117,10 @@ class MerchantController extends Controller
         
         return Datatables::of($merchant)
             ->addColumn('action', function ($merchant) {
-                if($merchant->status == 'pending'){
-                    return '<a onclick="Approve('. $merchant->id .')"><i class="fas fa-check text-success"></i></a>
-                            <a onclick="Reject('. $merchant->id .')"><i class="fas fa-times text-danger"></i></a>';
-                }if($merchant->status == 'reject'){
-                    return '<a onclick="deleteData('. $merchant->id .')"><i class="fas fa-trash-alt text-danger"></i></a>';
-                }else{
-                    return "";
-                }
+                return '<a onclick="editForm('. $merchant->id .')"><i class="fas fa-pencil-alt text-primary"></i></a>
+                        <a onclick="deleteData('. $merchant->id .')"><i class="fas fa-trash-alt text-danger"></i></a>';
             })
-            ->editColumn('type', function ($merchant) {
+            ->editColumn('is_official_store', function ($merchant) {
                 if($merchant->is_official_store=="true"){
                     $type = "<span class='badge badge-warning font-weight-bold' style='font-size: 10pt;'>Official Store</span>";
                 }else{
@@ -71,27 +128,7 @@ class MerchantController extends Controller
                 }
                 return $type;
             })
-            ->editColumn('harga_baru', function ($merchant) {
-                return number_format($merchant->harga_baru, 0,',',',');
-            })
-            ->editColumn('status', function ($merchant) {
-                $show = route('orders.show',$merchant->id);
-                if($merchant->status == 'pending'){
-                    $color  = 'badge-warning';
-                    $title  = 'Status Pending';
-                    $status = 'Pending';
-                }else if($merchant->status == 'approved'){
-                    $color  = 'badge-success';
-                    $title  = 'Status Approved';
-                    $status = 'Approved';
-                }else if($merchant->status == 'reject'){
-                    $color  = 'badge-danger';
-                    $title  = 'Status Reject';
-                    $status = 'Reject';
-                }
-                return "<span class='badge {$color} font-weight-bold' title='{$title}' style='font-size: 10pt;'>{$status}</span>";
-            })
-            ->rawColumns(['action','name-image','status','harga_baru'])
+            ->rawColumns(['action','is_official_store'])
 
             ->make(true);
     }

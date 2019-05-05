@@ -17,6 +17,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/7.33.1/sweetalert2.min.css"/>
     <!-- bootstrap validator -->
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jquery.bootstrapvalidator/0.5.2/css/bootstrapValidator.min.css"/>
+    <!-- Switcher -->
+    <link href="{{asset('plugins/vendors/switchery/dist/switchery.min.css')}}" rel="stylesheet"/>
 
     <style>
     .error{
@@ -59,7 +61,7 @@
                                 <ul class="nav nav-tabs customtab default-customtab list-inline text-uppercase lp-5 font-medium font-12"
                                     role="tablist">
                                     <li>
-                                        <a href="{{ route('product.create') }}" style="color:white;"
+                                        <a onclick="addForm()" style="color:white;"
                                            class="btn waves-effect waves-light btn-rounded btn-primary">Tambah Merchant</a>
                                     </li>
                                 </ul>
@@ -92,6 +94,9 @@
         <!-- ============================================================== -->
     </div>
 
+@include('merchant.form')
+
+
 @endsection
 
 @push('js')<!-- ============================================================== -->
@@ -115,6 +120,9 @@
 <!-- bootstrap validator -->
 <script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/jquery.validate.min.js"></script>
 <script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/additional-methods.min.js"></script>
+<!-- Switcher -->
+<script src="{{asset('plugins/vendors/switchery/dist/switchery.min.js')}}"></script>
+<script src="{{asset('plugins/vendors/styleswitcher/jQuery.style.switcher.js')}}"></script>
 <script>
 
 @if(\Session::has('message'))
@@ -141,6 +149,133 @@ $.toast({
 });
 @endif
 
+//modal add
+function addForm() {
+    save_method = "add";
+    $('input[name=_method]').val('POST');
+    $('#modal-form').modal('show');
+    $('#modal-form form')[0].reset();
+    $('.modal-title').text('Tambah Merchant');
+    $('.button').text('Simpan');
+}
+
+// modal edit
+function editForm(id) {
+    save_method = 'edit';
+    $('input[name=_method]').val('PATCH');
+    $('#modal-form form')[0].reset();
+    $.ajax({
+        url: "{{ url('merchant') }}" + '/' + id + "/edit",
+        type: "GET",
+        dataType: "JSON",
+        success: function(data) {
+        $('#modal-form').modal('show');
+        $('.modal-title').text('Edit Merchant');
+        $('.button').text('Ubah');
+        $('#id').val(data.id);
+        $('#name').val(data.name);
+        $('#email').val(data.email);
+        if(data.is_official_store == 'true'){
+            $('.js-switch').trigger('click');
+        }
+        },
+        error : function() {
+            alert("Nothing Data");
+        }
+    });
+}
+
+// action modal
+$(function(){
+    $('#modal-form').on('submit', function (e) {
+        if (!e.isDefaultPrevented()){
+            var id = $('#id').val();
+            if (save_method == 'add') url = "{{ url('merchant') }}";
+            else url = "{{ url('merchant') . '/' }}" + id;
+            $.ajax({
+                url : url,
+                type : "POST",
+//              data : $('#modal-form form').serialize(),
+                data: new FormData($("#modal-form form")[0]),
+                contentType: false,
+                processData: false,
+                success : function(data) {
+                    $('#modal-form').modal('hide');
+                    if (save_method == 'add'){
+                        $.toast({
+                            heading: 'Success!',
+                            position: 'top-center',
+                            text: 'Data berhasil disimpan',
+                            loaderBg: '#ff6849',
+                            icon: 'success',
+                            hideAfter: 3000,
+                            stack: 6
+                        });
+                        console.log(data);
+                        
+                    }else{
+                        $.toast({
+                            heading: 'Success!',
+                            position: 'top-center',
+                            text: 'Data berhasil disimpan',
+                            loaderBg: '#ff6849',
+                            icon: 'success',
+                            hideAfter: 3000,
+                            stack: 6
+                        });
+                    }
+                    $('#myTable').DataTable().ajax.reload();
+                    
+                },
+                error : function(data){
+                    var err = JSON.parse(data.responseText);
+                    if( data.status === 422 ) {
+                        if(err.errors['email']) {
+                            $('.hide-alert-email').css('display', "block");
+                            $('.hide-alert-email').text(err.errors['email']);
+                        }else if(err.errors['name']) {
+                            $('.hide-alert').css('display', "block");
+                            $('.hide-alert').text(err.errors['name']);
+                        }
+                    }
+                    $('#modal-form')
+                        .on('hidden.bs.modal', function () {
+                            $('.hide-alert').text([]);
+                            $('.hide-alert-image').text([]);
+                            
+                        });
+                }
+            });
+            return false;
+        }
+    });
+});
+
+$(document).ready(function() {
+    $('#modal-form')
+    .on('hidden.bs.modal', function () {
+        $('.hide-alert').text([]);
+        $('.hide-alert-email').text([]);
+        $('.js-switch').unbind('click');
+    });
+});
+
+
+$(function () {
+    // Switchery
+    var elems = Array.prototype.slice.call(document.querySelectorAll('.js-switch'));
+    $('.js-switch').each(function () {
+        var tmp = new Switchery($(this)[0], $(this).data());
+    });
+    $('.js-switch').on("change" , function() {
+        if($('.js-switch')[0].checked){
+            $('#status').text('Ya');
+        }else{
+            $('#status').text('Tidak');
+        }
+    });
+});
+
 //datatables
 $(function () {
     $('#myTable').DataTable({
@@ -149,18 +284,16 @@ $(function () {
     ajax: "{{ route('merchant.json') }}",
     columns: [
         { data: 'id', name: 'id' },
-        { data: 'name-image', name: 'title' },
-        { data: 'catname', name: 'categories.name' },
-        { data: 'sku', name: 'sku' },
-        { data: 'price', name: 'price' },
-        { data: 'stock', name: 'stock' },
-        { data: 'mercname', name: 'vendor_profiles.name' },
+        { data: 'name', name: 'name' },
+        { data: 'is_official_store', name: 'is_official_store' },
+        { data: 'email', name: 'sku' },
+        { data: 'phone', name: 'phone' },
         { data: 'action', name: 'action', orderable: false, searchable: false},
     ],
     "order": [[ 0, "desc" ]],
     'columnDefs': [
     {
-        "targets": 2,
+        "targets": 5,
         "className": "text-center"
     },
     {

@@ -52,6 +52,11 @@ Route::resource('/product-flashsale', 'ProductFlashSaleController')->except([
 Route::get('/productflashJson', 'ProductFlashSaleController@productFlashDatatables')->name('productflash.json');
 Route::post('product-flashsale/status/{id}','ProductFlashSaleController@approve')->name('product.status');
 
+//Merchant
+Route::resource('/merchant', 'MerchantController');
+Route::get('/merchantJson', 'MerchantController@merchantDatatables')->name('merchant.json');
+
+
 
 
 
