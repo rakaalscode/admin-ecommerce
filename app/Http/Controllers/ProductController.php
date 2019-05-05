@@ -17,6 +17,7 @@ use App\Helpers\{alliyunOSS};
 use OSS\OssClient;
 use OSS\Core\OssException;
 use DataTables;
+use DB;
 
 class ProductController extends Controller
 {
@@ -55,6 +56,8 @@ class ProductController extends Controller
         $bucket = env("OSS_BUCKET");
 
         try {
+            DB::beginTransaction();
+
             $product = new Product();
 
             $product->title        = strip_tags($request->input('title'));
@@ -107,12 +110,13 @@ class ProductController extends Controller
                     $gallery->save();
                 }
             }
-
+        DB::commit();
         Session::flash('message', 'Data berhasil disimpan');
         return redirect()->route('product.index');
 
         } catch (\Exception $e) {
-            Session::flash('message', 'Terjadi kesalahan di server');
+            DB::rollBack();
+            Session::flash('messages', 'Terjadi kesalahan di server');
             return redirect()->route('product.index');
         }
 
@@ -137,6 +141,8 @@ class ProductController extends Controller
     {
 
         try {
+            DB::beginTransaction();
+
             $product = Product::findOrFail($id);
             $gallery = Gallery::where('productid',$id)->first();
 
@@ -215,6 +221,7 @@ class ProductController extends Controller
             }
 
             $product->update($input);
+            DB::commit();
             Session::flash('message', 'Produk berhasil diupdate');
             if($request->input('import')==1){
                 return redirect('ecommerce/import_products');
@@ -223,6 +230,7 @@ class ProductController extends Controller
             }
 
         } catch (\Exception $e) {
+            DB::rollBack();
             Session::flash('messages','Terjadi kesalahan pada server');
             return redirect()->back();
         }
@@ -291,7 +299,7 @@ class ProductController extends Controller
                 return "<a href='{$edit}' title='Ubah'><i class='fas fa-pencil-alt text-primary'></i></a>
                         <a onclick='statusData($product->id)' title='{$title}'><i class='{$icon} {$color}'></i></a>
                         <a onclick='deleteData($product->id)' title='Hapus'><i class='fas fa-trash-alt text-danger'></i></a>
-                        <a href='{$show}' title='Detail'><i class='fa fa-eye text-primary'></i></a>";
+                        <a href='{$show}' title='Detail'><i class='fa fa-eye text-warning'></i></a>";
             })
             ->editColumn('price', function ($product) {
                 return number_format($product->price, 0,',',',');

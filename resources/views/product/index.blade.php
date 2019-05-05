@@ -60,7 +60,7 @@
                                     role="tablist">
                                     <li>
                                         <a href="{{ route('product.create') }}" style="color:white;"
-                                           class="btn waves-effect waves-light btn-rounded btn-primary">Tambah produk</a>
+                                           class="btn waves-effect waves-light btn-rounded btn-primary">Tambah Produk</a>
                                     </li>
                                 </ul>
                             </div>

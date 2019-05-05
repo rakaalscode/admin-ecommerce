@@ -39,8 +39,20 @@ Route::get('/subcategory/categoryJson','SubCategoryController@categorylist')->na
 Route::get('/subcategoryJson', 'SubCategoryController@subCategoryDatatables')->name('subcategory.json');
 
 // Order 
-Route::resource('/orders', 'OrderController');
-Route::get('/orderJson', 'OrderController@orderDatatables')->name('order.json');
+Route::resource('/orders', 'OrderController')->except([
+    'create', 'store', 'edit', 'update'
+]);
+Route::get('/orderJson', 'OrderController@orderDatatables')->name('orders.json');
+Route::post('/orders/approve/{id}', 'OrderController@approve')->name('orders.approve');
+
+//Product Flash Sale
+Route::resource('/product-flashsale', 'ProductFlashSaleController')->except([
+    'create', 'store', 'edit', 'update','show'
+]);
+Route::get('/productflashJson', 'ProductFlashSaleController@productFlashDatatables')->name('productflash.json');
+Route::post('product-flashsale/status/{id}','ProductFlashSaleController@approve')->name('product.status');
+
+
 
 
 Route::get('/', function () {
